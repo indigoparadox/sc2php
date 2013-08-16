@@ -1,31 +1,6 @@
 <?php
 
-function sc2_segment_types() {
-   return array(
-      'MISC' => 4800,    
-      'ALTM' => 32768,
-      'XTER' => 16384,    
-      'XBLD' => 16384,    
-      'XZON' => 16384,    
-      'XUND' => 16384,    
-      'XTXT' => 16384,    
-      'XLAB' => 6400,    
-      'XMIC' => 1200,    
-      'XTHG' => 480,    
-      'XBIT' => 16384,    
-      'XTRF' => 4096,    
-      'XPLT' => 4096,    
-      'XVAL' => 4096,    
-      'XCRM' => 4096,    
-      'XPLC' => 1024,    
-      'XFIR' => 1024,    
-      'XPOP' => 1024,    
-      'XROG' => 1024,    
-      'XGRP' => 3328,    
-      'CNAM' => 32,
-   );
-}
-
+// return: true if valid SC2k file
 function sc2_verify( $sc2_file ) {
    
    // TODO: Verify not null/open.
@@ -37,14 +12,56 @@ function sc2_verify( $sc2_file ) {
    return 'FORM' == $magic_number && 'SCDH' == $file_type; 
 }
 
+// return: unpacked segment data
 function _sc2_segment_unpack( $id, $data ) {
+   $output = array();
    if( 'CNAM' == $id ) {
       return $data;
+   } elseif( 'ALTM' == $id ) {
+      // Unpack the uncompressed altitude map.
+      $unpacked_data = unpack( 'C*', $data );
+      for( $i = 1 ; count( $unpacked_data ) + 1 > $i ; $i++ ) {
+         $output[] = $unpacked_data[$i];
+      }
+      return $output;
    } else {
-      return base64_encode( $data );
+      // Unpack the bytes from the binary string and start decoding them.
+      $data = unpack( 'C*', $data );
+
+      /*echo( '<div style="float: left">' );
+      echo( '<h2>Data</h2>' );
+      print_r( $data );
+      echo( '</div>' );*/
+      
+      // Decode the simple RLE-esque sequence for the given segment.
+      for( $i = 1 ; count( $data ) + 1 > $i ; $i++ ) {
+         if( 1 <= $data[$i] && 127 >= $data[$i] ) {
+            // Unencoded data bytes follow.
+            $seq = $data[$i];
+            for( $j = 0 ; $seq > $j ; $j++ ) {
+               $output[] = $data[++$i];
+            }
+
+         } elseif( 129 <= $data[$i] && 255 >= $data[$i] ) {
+            // An encoded data byte follows.
+            $repeat = $data[$i] - 127;
+            $i++; // Proceed to the data byte.
+            for( $j = 0 ; $repeat > $j ; $j++ ) {
+               $output[] = $data[$i];
+            }
+         }
+      }
+
+      /*echo( '<div style="float: left">' );
+      echo( '<h2>Output</h2>' );
+      print_r( $output );
+      echo( '</div>' );*/
+
+      return $output;
    }
 }
 
+// return: unpacked segment list
 function sc2_segments( $sc2_file ) {
    $segments = array();
    $bytes = 0;
@@ -52,42 +69,29 @@ function sc2_segments( $sc2_file ) {
    // Read the file header.
    fseek( $sc2_file, 0 );
    $sc2_header = unpack(
-      'A4type/N1length/A4filetype',
+      'A4type/N1packed/A4filetype',
       fread( $sc2_file, 12 )
    );
 
    // Iterate through each segment until we get to the end. (-4?)
-   while( $bytes < $sc2_header['length'] - 4 ) {
+   while( $bytes < $sc2_header['packed'] - 4 ) {
       $bytes += 8; // Every segment head is 8 bytes.
       $header = unpack(
-         'A4type/N1length',
+         'A4type/N1packed',
          fread( $sc2_file, 8 )
       );
-      $bytes += $header['length'];
+      $bytes += $header['packed'];
+      $data = _sc2_segment_unpack(
+         $header['type'],
+         fread( $sc2_file, $header['packed'] )
+      );
       $segments[] = array(
          'header' => $header,
-         'data' => _sc2_segment_unpack(
-            $header['type'],
-            fread( $sc2_file, $header['length'] )
-         ),
+         'length' => count( $data ),
+         'data' => $data,
       );
-
-      /*
-      $segment_type = fread( $sc2_file, 4 );
-      $segment_len = fread( $sc2_file, 4 );
-      //print_r( intval( $segment_len ) );
-      $segment = array( 'type' => $segment_type );
-      if( 0 < intval( $segment_len ) ) {
-         $segment['data'] = fread( $sc2_file, intval( $segment_len ) );
-      }
-      $segments[] = $segment;
-      */
    }
 
    return $segments;
-}
-
-function sc2_title( $sc2_file ) {
-   
 }
 
