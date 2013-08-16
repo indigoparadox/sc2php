@@ -12,52 +12,51 @@ function sc2_verify( $sc2_file ) {
    return 'FORM' == $magic_number && 'SCDH' == $file_type; 
 }
 
+function _sc2_rle_decode( $data ) {
+   // Unpack the bytes from the binary string and start decoding them.
+   $data = unpack( 'C*', $data );
+
+   // Decode the simple RLE-esque sequence for the given segment.
+   for( $i = 1 ; count( $data ) + 1 > $i ; $i++ ) {
+      if( 1 <= $data[$i] && 127 >= $data[$i] ) {
+         // Unencoded data bytes follow.
+         $seq = $data[$i];
+         for( $j = 0 ; $seq > $j ; $j++ ) {
+            $output[] = $data[++$i];
+         }
+
+      } elseif( 129 <= $data[$i] && 255 >= $data[$i] ) {
+         // An encoded data byte follows.
+         $repeat = $data[$i] - 127;
+         $i++; // Proceed to the data byte.
+         for( $j = 0 ; $repeat > $j ; $j++ ) {
+            $output[] = $data[$i];
+         }
+      }
+   }
+
+   return $output;
+}
+
 // return: unpacked segment data
 function _sc2_segment_unpack( $id, $data ) {
-   $output = array();
    if( 'CNAM' == $id ) {
       return $data;
    } elseif( 'ALTM' == $id ) {
-      // Unpack the uncompressed altitude map.
-      $unpacked_data = unpack( 'C*', $data );
-      for( $i = 1 ; count( $unpacked_data ) + 1 > $i ; $i++ ) {
-         $output[] = $unpacked_data[$i];
+      // Unpack the uncompressed altitude map, resetting array indices.
+      return array_values( unpack( 'C*', $data ) );
+   } elseif( 'MISC' == $id ) {
+      // Repack the uncompressed data and unpack it as longs.
+      $decoded = _sc2_rle_decode( $data );
+      unset( $data );
+      $repacked = '';
+      for( $i = 0 ; count( $decoded ) > $i ; $i++ ) {
+         $repacked .= pack( 'C1', $decoded[$i] );
       }
-      return $output;
+      // Reset array indices from unpack()'s 1-indexed scheme.
+      return array_values( unpack( 'N1200', $repacked ) );
    } else {
-      // Unpack the bytes from the binary string and start decoding them.
-      $data = unpack( 'C*', $data );
-
-      /*echo( '<div style="float: left">' );
-      echo( '<h2>Data</h2>' );
-      print_r( $data );
-      echo( '</div>' );*/
-      
-      // Decode the simple RLE-esque sequence for the given segment.
-      for( $i = 1 ; count( $data ) + 1 > $i ; $i++ ) {
-         if( 1 <= $data[$i] && 127 >= $data[$i] ) {
-            // Unencoded data bytes follow.
-            $seq = $data[$i];
-            for( $j = 0 ; $seq > $j ; $j++ ) {
-               $output[] = $data[++$i];
-            }
-
-         } elseif( 129 <= $data[$i] && 255 >= $data[$i] ) {
-            // An encoded data byte follows.
-            $repeat = $data[$i] - 127;
-            $i++; // Proceed to the data byte.
-            for( $j = 0 ; $repeat > $j ; $j++ ) {
-               $output[] = $data[$i];
-            }
-         }
-      }
-
-      /*echo( '<div style="float: left">' );
-      echo( '<h2>Output</h2>' );
-      print_r( $output );
-      echo( '</div>' );*/
-
-      return $output;
+      return _sc2_rle_decode( $data );
    }
 }
 
