@@ -1,5 +1,15 @@
 <?php
 
+// define: MISC segment data indexes
+define( 'SC2_MISC_FOUNDING_YEAR', 3 );
+define( 'SC2_MISC_DAYS_ELAPSED', 4 );
+define( 'SC2_MISC_MONEY_SUPPLY', 5 );
+define( 'SC2_MISC_SIMNATION_POP', 20 );
+define( 'SC2_MISC_NEIGHBOR_1_POP', 439 );
+define( 'SC2_MISC_NEIGHBOR_2_POP', 443 );
+define( 'SC2_MISC_NEIGHBOR_3_POP', 447 );
+define( 'SC2_MISC_NEIGHBOR_4_POP', 451 );
+
 // return: true if valid SC2k file
 function sc2_verify( $sc2_file ) {
    
