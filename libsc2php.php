@@ -10,6 +10,9 @@ define( 'SC2_MISC_NEIGHBOR_2_POP', 443 );
 define( 'SC2_MISC_NEIGHBOR_3_POP', 447 );
 define( 'SC2_MISC_NEIGHBOR_4_POP', 451 );
 
+// define: XLAB segment label indexes
+define( 'SC2_XLAB_MAYOR_NAME', 0 );
+
 // return: true if valid SC2k file
 function sc2_verify( $sc2_file ) {
    
@@ -65,6 +68,25 @@ function _sc2_segment_unpack( $id, $data ) {
       }
       // Reset array indices from unpack()'s 1-indexed scheme.
       return array_values( unpack( 'N1200', $repacked ) );
+   } elseif( 'XLAB' == $id ) {
+      $decoded = _sc2_rle_decode( $data );
+      unset( $data );
+      $output = array();
+      // Loop through the byte array and decode the 25-byte strings contained
+      // within.
+      for( $i = 0 ; count( $decoded ) > $i ; $i++ ) {
+         if( 0 == $i % 25 ) {
+            if( isset( $label ) ) {
+               // Append the finished 25-byte label to the array.
+               $output[] = $label;
+            }
+            // Start again (or anew).
+            $label = '';
+         } else {
+            $label .= chr( $decoded[$i] );
+         }
+      }
+      return $output;
    } else {
       return _sc2_rle_decode( $data );
    }
