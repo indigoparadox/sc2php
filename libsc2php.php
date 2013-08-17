@@ -83,235 +83,243 @@ function _sc2_rle_decode( $data ) {
 
 // return: unpacked segment data
 function _sc2_segment_unpack( $id, $data ) {
-   if( 'CNAM' == $id ) {
-      return $data;
-   } elseif( 'ALTM' == $id ) {
-      $unpacked = unpack( 'C*', $data );
-      $rows = array();
+   switch( $id ) {
+      case 'CNAM':
+         return $data;
 
-      // Each map row is 2 bytes.
-      $map_rows_times_2 = SC2_MAP_ROWS_MAX * 2;
+      case 'ALTM':
+         $unpacked = unpack( 'C*', $data );
+         unset( $data );
 
-      // TODO: Rather than n1 followed by anding, unpack the 4-bit altitude
-      //       number directly, somehow.
+         // Each map row is 2 bytes.
+         $map_rows_times_2 = SC2_MAP_ROWS_MAX * 2;
 
-      // The first four bits of a tile long hold the altitude.
-      $tile_altitude_bits = SC2_BIT0 + SC2_BIT1 + SC2_BIT2 + SC2_BIT3;
+         // TODO: Rather than n1 followed by anding, unpack the 4-bit altitude
+         //       number directly, somehow.
 
-      // Divide the map into 128 rows of 128 columns of tiles.
-      for( $i = 1 ; $i <= count( $unpacked ) ; $i += $map_rows_times_2 ) {
-         $row = array();
-         for( $j = 0 ; $j < $map_rows_times_2 ; $j += 2 ) {
-            // Pack the bytes and then unpack them into big-endian 16-bit ints.
-            $tile = unpack( 'n1', pack(
-               'C2', $unpacked[$i + $j], $unpacked[$i + $j + 1]
-            ) );
+         // The first four bits of a tile long hold the altitude.
+         $tile_altitude_bits = SC2_BIT0 + SC2_BIT1 + SC2_BIT2 + SC2_BIT3;
+
+         // Divide the map into 128 rows of 128 columns of tiles.
+         $rows = array();
+         for( $i = 1 ; $i <= count( $unpacked ) ; $i += $map_rows_times_2 ) {
+            $row = array();
+            for( $j = 0 ; $j < $map_rows_times_2 ; $j += 2 ) {
+               // Pack the bytes and then unpack them into big-endian 16-bit
+               // ints.
+               $tile = unpack( 'n1', pack(
+                  'C2', $unpacked[$i + $j], $unpacked[$i + $j + 1]
+               ) );
+               $tile = array(
+                  'altitude' => $tile_altitude_bits & $tile[1],
+                  'water' => (SC2_BIT7 & $tile[1]) ? true : false,
+               );
+               $row[] = $tile;
+            }
+            $rows[] = $row;
+         }
+         return $rows;
+      
+      case 'MISC':
+         // Repack the data after uncompressing it and unpack it as longs.
+         $decoded = _sc2_rle_decode( $data );
+         unset( $data );
+         $repacked = '';
+         for( $i = 0 ; count( $decoded ) > $i ; $i++ ) {
+            $repacked .= pack( 'C1', $decoded[$i] );
+         }
+         $longs = unpack( 'N1200', $repacked );
+
+         // If we ever figure out what those other numbers do, we can add them
+         // with a meaningful index here. This makes it simpler to deal with the
+         // data array client-side if it gets translated to JSON.
+         return array(
+            'founding_year' => $longs[4],
+            'days_elapsed' => $longs[5],
+            'money_supply' => $longs[6],
+            'simnation_pop' => $longs[21],
+            'neighbor1_pop' => $longs[440],
+            'neighbor2_pop' => $longs[444],
+            'neighbor3_pop' => $longs[448],
+            'neighbor4_pop' => $longs[452],
+         );
+
+      case 'XTER':
+         $decoded = _sc2_rle_decode( $data );
+         unset( $data );
+      
+         // Generally, bits 4 and 5 of each tile decide its water coverage.
+         $tile_water_bits = SC2_BIT4 + SC2_BIT5;
+
+         // For canal/surf tiles, bits 0-3 decide the directions they point.
+         $tile_canal_bits = SC2_BIT0 + SC2_BIT1 + SC2_BIT3;
+
+         // Parse and divide the tile shape data into 128 rows of 128 columns.
+         $rows = array();
+         for( $i = 0 ; count( $decoded ) > $i ; $i++ ) {
+            if( 0 == $i % SC2_MAP_ROWS_MAX ) {
+               if( isset( $row ) ) {
+                  // Append the finished 25-byte label to the array.
+                  $rows[] = $row;
+               }
+               $row = array();
+            }
+
+            // Set the defaults for this tile and process them below.
             $tile = array(
-               'altitude' => $tile_altitude_bits & $tile[1],
-               'water' => (SC2_BIT7 & $tile[1]) ? true : false,
+               'raised' => array( 'nw' => 0, 'ne' => 0, 'se' => 0, 'sw' => 0 ),
+               'water' => 'none',
+               'canal' => array( 'n' => 0, 'e' => 0, 's' => 0, 'w' => 0 ),
             );
+            
+            // Detect some special exceptions.
+            if( 0x3e == $decoded[$i] ) {
+               // TODO: Taken from the spec, what does this mean, precisely?
+               $tile['water'] = 'waterfall';
+
+            } elseif( 0x40 & $decoded[$i] ) {
+               // Figure out the surface water situation.
+               $tile['water'] = 'surface';
+               switch( $tile_canal_bits & $decoded[$i] ) {
+                  case 0x0:
+                     $tile['canal']['e'] = 1;
+                     $tile['canal']['w'] = 1;
+                     break;
+
+                  case 0x1:
+                     $tile['canal']['e'] = 1;
+                     $tile['canal']['w'] = 1;
+                     break;
+
+                  case 0x2:
+                     $tile['canal']['s'] = 1;
+                     break;
+
+                  case 0x3:
+                     $tile['canal']['w'] = 1;
+                     break;
+
+                  case 0x4:
+                     $tile['canal']['n'] = 1;
+                     break;
+                     
+                  case 0x5:
+                     $tile['canal']['s'] = 1;
+                     break;
+               }
+
+            } else {
+               // Figure out the raised corners of this tile.
+               switch( 15 & $decoded[$i] ) {
+                  case 0x1:
+                     $tile['raised']['nw'] = 1;
+                     $tile['raised']['ne'] = 1;
+                     break;
+
+                  case 0x2:
+                     $tile['raised']['ne'] = 1;
+                     $tile['raised']['se'] = 1;
+                     break;
+
+                  case 0x3:
+                     $tile['raised']['se'] = 1;
+                     $tile['raised']['sw'] = 1;
+                     break;
+
+                  case 0x4:
+                     $tile['raised']['sw'] = 1;
+                     $tile['raised']['nw'] = 1;
+                     break;
+
+                  case 0x5:
+                     $tile['raised']['sw'] = 1;
+                     $tile['raised']['nw'] = 1;
+                     break;
+
+                  case 0x6:
+                     $tile['raised']['ne'] = 1;
+                     $tile['raised']['sw'] = 1;
+                     $tile['raised']['se'] = 1;
+                     break;
+
+                  case 0x7:
+                     $tile['raised']['sw'] = 1;
+                     $tile['raised']['se'] = 1;
+                     $tile['raised']['nw'] = 1;
+                     break;
+
+                  case 0x8:
+                     $tile['raised']['sw'] = 1;
+                     $tile['raised']['nw'] = 1;
+                     $tile['raised']['ne'] = 1;
+                     break;
+
+                  case 0x9:
+                     $tile['raised']['ne'] = 1;
+                     break;
+
+                  case 0xa:
+                     $tile['raised']['se'] = 1;
+                     break;
+
+                  case 0xb:
+                     $tile['raised']['sw'] = 1;
+                     break;
+
+                  case 0xc:
+                     $tile['raised']['nw'] = 1;
+                     break;
+
+                  case 0xd:
+                     $tile['raised']['nw'] = 1;
+                     $tile['raised']['ne'] = 1;
+                     $tile['raised']['se'] = 1;
+                     $tile['raised']['sw'] = 1;
+                     break;
+               }
+
+               // Figure out the water situation on this tile.
+               switch( $tile_water_bits & $decoded[$i] ) {
+                  case 0x10:
+                     $tile['water'] = 'submerged';
+                     break;
+
+                  case 0x20:
+                     $tile['water'] = 'partial';
+                     break;
+               }
+            }
+
             $row[] = $tile;
          }
-         $rows[] = $row;
-      }
-      return $rows;
-      
-   } elseif( 'MISC' == $id ) {
-      // Repack the data after uncompressing it and unpack it as longs.
-      $decoded = _sc2_rle_decode( $data );
-      unset( $data );
-      $repacked = '';
-      for( $i = 0 ; count( $decoded ) > $i ; $i++ ) {
-         $repacked .= pack( 'C1', $decoded[$i] );
-      }
-      $longs = unpack( 'N1200', $repacked );
+         return $rows;
 
-      // If we ever figure out what those other numbers do, we can add them
-      // with a meaningful index here. This makes it simpler to deal with the
-      // data array client-side if it gets translated to JSON.
-      return array(
-         'founding_year' => $longs[4],
-         'days_elapsed' => $longs[5],
-         'money_supply' => $longs[6],
-         'simnation_pop' => $longs[21],
-         'neighbor1_pop' => $longs[440],
-         'neighbor2_pop' => $longs[444],
-         'neighbor3_pop' => $longs[448],
-         'neighbor4_pop' => $longs[452],
-      );
+      case 'XLAB':
+         $decoded = _sc2_rle_decode( $data );
+         unset( $data );
 
-   } elseif( 'XTER' == $id ) {
-      $decoded = _sc2_rle_decode( $data );
-      unset( $data );
-   
-      // Generally, bits 4 and 5 of each tile decide its water coverage.
-      $tile_water_bits = SC2_BIT4 + SC2_BIT5;
-
-      // For canal/surf tiles, bits 0-3 decide the directions they point.
-      $tile_canal_bits = SC2_BIT0 + SC2_BIT1 + SC2_BIT3;
-
-      // Parse and divide the tile shape data into 128 rows of 128 columns.
-      $rows = array();
-      for( $i = 0 ; count( $decoded ) > $i ; $i++ ) {
-         if( 0 == $i % SC2_MAP_ROWS_MAX ) {
-            if( isset( $row ) ) {
-               // Append the finished 25-byte label to the array.
-               $rows[] = $row;
-            }
-            $row = array();
-         }
-
-         // Set the defaults for this tile and process them below.
-         $tile = array(
-            'raised' => array( 'nw' => 0, 'ne' => 0, 'se' => 0, 'sw' => 0 ),
-            'water' => 'none',
-            'canal' => array( 'n' => 0, 'e' => 0, 's' => 0, 'w' => 0 ),
-         );
-         
-         // Detect some special exceptions.
-         if( 0x3e == $decoded[$i] ) {
-            // TODO: Taken from the spec, what does this mean, precisely?
-            $tile['water'] = 'waterfall';
-
-         } elseif( 0x40 & $decoded[$i] ) {
-            // Figure out the surface water situation.
-            $tile['water'] = 'surface';
-            switch( $tile_canal_bits & $decoded[$i] ) {
-               case 0x0:
-                  $tile['canal']['e'] = 1;
-                  $tile['canal']['w'] = 1;
-                  break;
-
-               case 0x1:
-                  $tile['canal']['e'] = 1;
-                  $tile['canal']['w'] = 1;
-                  break;
-
-               case 0x2:
-                  $tile['canal']['s'] = 1;
-                  break;
-
-               case 0x3:
-                  $tile['canal']['w'] = 1;
-                  break;
-
-               case 0x4:
-                  $tile['canal']['n'] = 1;
-                  break;
-                  
-               case 0x5:
-                  $tile['canal']['s'] = 1;
-                  break;
-            }
-
-         } else {
-            // Figure out the raised corners of this tile.
-            switch( 15 & $decoded[$i] ) {
-               case 0x1:
-                  $tile['raised']['nw'] = 1;
-                  $tile['raised']['ne'] = 1;
-                  break;
-
-               case 0x2:
-                  $tile['raised']['ne'] = 1;
-                  $tile['raised']['se'] = 1;
-                  break;
-
-               case 0x3:
-                  $tile['raised']['se'] = 1;
-                  $tile['raised']['sw'] = 1;
-                  break;
-
-               case 0x4:
-                  $tile['raised']['sw'] = 1;
-                  $tile['raised']['nw'] = 1;
-                  break;
-
-               case 0x5:
-                  $tile['raised']['sw'] = 1;
-                  $tile['raised']['nw'] = 1;
-                  break;
-
-               case 0x6:
-                  $tile['raised']['ne'] = 1;
-                  $tile['raised']['sw'] = 1;
-                  $tile['raised']['se'] = 1;
-                  break;
-
-               case 0x7:
-                  $tile['raised']['sw'] = 1;
-                  $tile['raised']['se'] = 1;
-                  $tile['raised']['nw'] = 1;
-                  break;
-
-               case 0x8:
-                  $tile['raised']['sw'] = 1;
-                  $tile['raised']['nw'] = 1;
-                  $tile['raised']['ne'] = 1;
-                  break;
-
-               case 0x9:
-                  $tile['raised']['ne'] = 1;
-                  break;
-
-               case 0xa:
-                  $tile['raised']['se'] = 1;
-                  break;
-
-               case 0xb:
-                  $tile['raised']['sw'] = 1;
-                  break;
-
-               case 0xc:
-                  $tile['raised']['nw'] = 1;
-                  break;
-
-               case 0xd:
-                  $tile['raised']['nw'] = 1;
-                  $tile['raised']['ne'] = 1;
-                  $tile['raised']['se'] = 1;
-                  $tile['raised']['sw'] = 1;
-                  break;
-            }
-
-            // Figure out the water situation on this tile.
-            switch( $tile_water_bits & $decoded[$i] ) {
-               case 0x10:
-                  $tile['water'] = 'submerged';
-                  break;
-
-               case 0x20:
-                  $tile['water'] = 'partial';
-                  break;
+         // Loop through the byte array and decode the 25-byte strings contained
+         // within.
+         $output = array();
+         for( $i = 0 ; count( $decoded ) > $i ; $i++ ) {
+            if( 0 == $i % 25 ) {
+               if( isset( $label ) ) {
+                  // Append the finished 25-byte label to the array.
+                  $output[] = $label;
+               }
+               // Start again (or anew).
+               $label = '';
+            } else {
+               $label .= chr( $decoded[$i] );
             }
          }
+         return $output;
 
-         $row[] = $tile;
-      }
-      return $rows;
-
-   } elseif( 'XLAB' == $id ) {
-      $decoded = _sc2_rle_decode( $data );
-      unset( $data );
-      $output = array();
-      // Loop through the byte array and decode the 25-byte strings contained
-      // within.
-      for( $i = 0 ; count( $decoded ) > $i ; $i++ ) {
-         if( 0 == $i % 25 ) {
-            if( isset( $label ) ) {
-               // Append the finished 25-byte label to the array.
-               $output[] = $label;
-            }
-            // Start again (or anew).
-            $label = '';
-         } else {
-            $label .= chr( $decoded[$i] );
-         }
-      }
-      return $output;
-
-   } else {
-      return _sc2_rle_decode( $data );
+      // Skip loading other segments for now since they're not even meaningfully
+      // decoded yet.
+      default:
+         //return _sc2_rle_decode( $data );
+         return null;
    }
 }
 
@@ -339,11 +347,7 @@ function sc2_segments( $sc2_file ) {
          $header['type'],
          fread( $sc2_file, $header['packed'] )
       );
-      $segments[] = array(
-         'header' => $header,
-         'length' => count( $data ),
-         'data' => $data,
-      );
+      $segments[$header['type']] = $data;
    }
 
    return $segments;
