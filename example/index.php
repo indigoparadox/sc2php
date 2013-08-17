@@ -16,21 +16,25 @@ if( !file_exists( $city_name.'.json' ) ) {
 ?><html>
  <head>
   <title>SimCity 2000 Decoding Demo</title>
-  <link rel="stylesheet" type="text/css" href="sc2css.css" />
-  <script
-   type="text/javascript"
-   src="http://code.jquery.com/jquery-2.0.3.min.js"
-  ></script>
-  <script type="text/javascript" src="sc2css.js"></script>
+  <style type="text/css">
+   body {
+    background: black;
+   }
+  </style>
+  <script type="text/javascript" src="three.min.js"></script>
+  <script type="text/javascript" src="jquery.min.js"></script>
+  <script type="text/javascript" src="sc23d.js"></script>
   <script type="text/javascript">
    $(document).ready( function() {
     $.getJSON( '<?php echo( $city_name ); ?>.json', function( data ) {
-      sc2css_render_city( data );
+      sc23d_render_city( data );
     } );
    } );
   </script>
  </head>
  <body>
-  <div id="city-map-container"></div>
+  <div style="
+   display: table; margin: 0px auto
+  " id="city-map-container"></div>
  </body>
 </html>
