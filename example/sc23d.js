@@ -102,9 +102,9 @@ function sc23d_render_city( city ) {
    sc23dScene.add( sc23dMap );
    sc23dScene.add( sc23dCamera );
    sc23dCamera.lookAt( sc23dScene.position );
-   sc23dRenderer.setSize( WIDTH, HEIGHT );
+   sc23dRenderer.setSize( window.innerWidth, window.innerHeight );
    sc23dRenderer.setClearColor( new THREE.Color( 0x000000 ) );
-   $('#city-map-container').append( sc23dRenderer.domElement );
+   $('body').append( sc23dRenderer.domElement );
 
    sc23dAnimate();
 }
