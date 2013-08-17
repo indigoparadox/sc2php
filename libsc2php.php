@@ -147,6 +147,7 @@ function _sc2_segment_unpack( $id, $data ) {
       // Generally, bits 4 and 5 of each tile decide its water coverage.
       $tile_water_bits = SC2_BIT4 + SC2_BIT5;
 
+      // For canal/surf tiles, bits 0-3 decide the directions they point.
       $tile_canal_bits = SC2_BIT0 + SC2_BIT1 + SC2_BIT3;
 
       // Parse and divide the tile shape data into 128 rows of 128 columns.
