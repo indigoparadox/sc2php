@@ -1,6 +1,13 @@
 <?php
 
 /*
+A simple PHP library to decode SimCity 2000 saved cities into a more readily 
+usable form. Might be useful for making things like online leaderboards or
+WebGL-based 3D city drive-throughs. Based heavily on the file format
+information from: http://djm.cc/simcity-2000-info.txt
+
+Written by indigoparadox, https://bitbucket.org/indigoparadox/sc2php/overview
+
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
 as published by the Free Software Foundation; either version 2
@@ -32,7 +39,10 @@ define( 'SC2_XLAB_MAYOR_NAME', 0 );
 // return: true if valid SC2k file
 function sc2_verify( $sc2_file ) {
    
-   // TODO: Verify not null/open.
+   // Verify open/not null.
+   if( empty( $sc2_file ) ) {
+      return false;
+   }
 
    // Verify magic number and IFF file type.
    $magic_number = fread( $sc2_file, 4 );
@@ -41,8 +51,9 @@ function sc2_verify( $sc2_file ) {
    return 'FORM' == $magic_number && 'SCDH' == $file_type; 
 }
 
+// return: uncompressed segment data
 function _sc2_rle_decode( $data ) {
-   // Unpack the bytes from the binary string and start decoding them.
+   // Unpack the bytes from the binary string to decode.
    $data = unpack( 'C*', $data );
 
    // Decode the simple RLE-esque sequence for the given segment.
