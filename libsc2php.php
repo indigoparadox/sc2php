@@ -83,8 +83,27 @@ function _sc2_segment_unpack( $id, $data ) {
    if( 'CNAM' == $id ) {
       return $data;
    } elseif( 'ALTM' == $id ) {
-      // Unpack the uncompressed altitude map, resetting array indices.
-      return array_values( unpack( 'C*', $data ) );
+      // Unpack the uncompressed altitude map, dividing into 128 rows of 128
+      // columns of tiles.
+      $unpacked = unpack( 'C*', $data );
+      $rows = array();
+      for( $i = 1 ; $i <= count( $unpacked ) ; $i += 256 ) {
+         $row = array();
+         for( $j = 0 ; $j < 256 ; $j += 2 ) {
+            // Pack the bytes and then unpack them into big-endian 16-bit ints.
+            $tile = unpack( 'n1', pack(
+               'C2', $unpacked[$i + $j], $unpacked[$i + $j + 1]
+            ) );
+            $tile = array(
+               'altitude' => 15 & $tile[1], // Bits 4-0
+               'water' => (128 & $tile[1]) ? true : false, // Bit 7
+            );
+            $row[] = $tile;
+         }
+         $rows[] = $row;
+      }
+      return $rows;
+      
    } elseif( 'MISC' == $id ) {
       // Repack the uncompressed data and unpack it as longs.
       $decoded = _sc2_rle_decode( $data );
@@ -95,6 +114,7 @@ function _sc2_segment_unpack( $id, $data ) {
       }
       // Reset array indices from unpack()'s 1-indexed scheme.
       return array_values( unpack( 'N1200', $repacked ) );
+
    } elseif( 'XLAB' == $id ) {
       $decoded = _sc2_rle_decode( $data );
       unset( $data );
@@ -114,6 +134,7 @@ function _sc2_segment_unpack( $id, $data ) {
          }
       }
       return $output;
+
    } else {
       return _sc2_rle_decode( $data );
    }
