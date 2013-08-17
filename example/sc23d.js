@@ -24,7 +24,8 @@ function sc23d_render_city( city ) {
    console.log( city['XTER'][126][0] );
 
    // Add each tile to the scene.
-   sc23dMap = new THREE.Object3D();
+   var map_geom = new THREE.Geometry();
+   var water_geom = new THREE.Geometry();
    $.each( city['ALTM'], function( row_index, row ) {
       var x = -640 + (row_index * 10);
       var y = -640;
@@ -33,6 +34,8 @@ function sc23d_render_city( city ) {
             z_ne = 0,
             z_se = 0,
             z_sw = 0;
+
+         // TODO: Set the Z to the water line for water tiles.
 
          /*
          if( city['XTER'][row_index][tile_index]['raised']['nw'] ) {
@@ -69,21 +72,31 @@ function sc23d_render_city( city ) {
          // Set the tile color based on the presence of water.
          var color = 0;
          if( tile.water ) {
-            color = 0x0000ee;
+            THREE.GeometryUtils.merge( water_geom, tile_geom );
          } else {
-            color = 0xffffe5;
+            THREE.GeometryUtils.merge( map_geom, tile_geom );
          }
 
          // Add the tile to the map group.
-         sc23dMap.add( new THREE.Mesh(
-            tile_geom, new THREE.MeshBasicMaterial( {
-               'color': color
-            } )
-         ) );
 
          y += 10;
       } );
    } );
+
+   // Create separare meshes for land and water.
+   sc23dMap = new THREE.Object3D();
+   sc23dMap.add( new THREE.Mesh(
+      map_geom,
+      new THREE.MeshBasicMaterial( {
+         'color': 0xffffe5, 'wireframe': false
+      } )
+   ) );
+   sc23dMap.add( new THREE.Mesh(
+      water_geom,
+      new THREE.MeshBasicMaterial( {
+         'color': 0x0000ee, 'wireframe': false
+      } )
+   ) );
 
    // Setup the scene.
    sc23dScene.add( sc23dMap );
