@@ -1,5 +1,12 @@
 <?php
 require_once( '../libsc2php.php' );
+// Get the arguments.
+$action = '';
+if( isset( $_REQUEST['action'] ) ) {
+   $action = $_REQUEST['action'];
+}
+
+// Load the city data.
 $city_name = 'test';
 if( !file_exists( $city_name.'.json' ) ) {
    $sc2_file = fopen( $city_name.'.sc2', 'rb' );
@@ -12,6 +19,9 @@ if( !file_exists( $city_name.'.json' ) ) {
       fwrite( $cache_file, json_encode( $segments ) );
       fclose( $cache_file );
    }
+} else {
+   $segments = file_get_contents( $city_name.'.json' );
+   $segments = json_decode( $segments );
 }
 ?><html>
  <head>
@@ -19,11 +29,13 @@ if( !file_exists( $city_name.'.json' ) ) {
   <style type="text/css">
    body {
     background: black;
+    color: white;
    }
   </style>
   <script type="text/javascript" src="three.min.js"></script>
   <script type="text/javascript" src="jquery.min.js"></script>
   <script type="text/javascript" src="sc23d.js"></script>
+  <?php if( 'src' != $action ) { ?>
   <script type="text/javascript">
    $(document).ready( function() {
     $.getJSON( '<?php echo( $city_name ); ?>.json', function( data ) {
@@ -31,10 +43,16 @@ if( !file_exists( $city_name.'.json' ) ) {
     } );
    } );
   </script>
+  <?php } ?>
  </head>
  <body>
   <div style="
    display: table; margin: 0px auto
   " id="city-map-container"></div>
  </body>
+ <pre>
+ <?php if( 'src' == $action ) {
+  print_r( $segments );
+ } ?>
+ </pre>
 </html>
