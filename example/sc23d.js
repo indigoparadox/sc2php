@@ -21,25 +21,47 @@ function sc23d_render_city( city ) {
    sc23dCamera.position.z = 600;
    sc23dScene = new THREE.Scene();
 
+   console.log( city['XTER'][126][0] );
+
    // Add each tile to the scene.
    sc23dMap = new THREE.Object3D();
    $.each( city['ALTM'], function( row_index, row ) {
       var x = -640 + (row_index * 10);
       var y = -640;
       $.each( row, function( tile_index, tile ) {
+         var z_nw = 0,
+            z_ne = 0,
+            z_se = 0,
+            z_sw = 0;
+
+         /*
+         if( city['XTER'][row_index][tile_index]['raised']['nw'] ) {
+            z_nw = 10;
+         }
+         if( city['XTER'][row_index][tile_index]['raised']['ne'] ) {
+            z_ne = 10;
+         }
+         if( city['XTER'][row_index][tile_index]['raised']['se'] ) {
+            z_se = 10;
+         }
+         if( city['XTER'][row_index][tile_index]['raised']['sw'] ) {
+            z_sw = 10;
+         }
+         */
+
          // Create a square for the tile.
          var tile_geom = new THREE.Geometry();
          tile_geom.vertices.push( new THREE.Vector3(
-            x, y, tile['altitude'] * 10
+            x, y, (tile['altitude'] * 10) + z_nw
          ) );
          tile_geom.vertices.push( new THREE.Vector3(
-            x + 10, y, tile['altitude'] * 10 
+            x + 10, y, (tile['altitude'] * 10) + z_ne
          ) );
          tile_geom.vertices.push( new THREE.Vector3(
-            x + 10, y + 10, tile['altitude'] * 10 
+            x + 10, y + 10, (tile['altitude'] * 10) + z_se
          ) );
          tile_geom.vertices.push( new THREE.Vector3(
-            x, y + 10, tile['altitude'] * 10
+            x, y + 10, (tile['altitude'] * 10) + z_sw
          ) );
          tile_geom.faces.push( new THREE.Face3( 0, 1, 2 ) );
          tile_geom.faces.push( new THREE.Face3( 2, 3, 0 ) );
