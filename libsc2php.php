@@ -23,16 +23,6 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
-// define: MISC segment data indexes
-define( 'SC2_MISC_FOUNDING_YEAR', 3 );
-define( 'SC2_MISC_DAYS_ELAPSED', 4 );
-define( 'SC2_MISC_MONEY_SUPPLY', 5 );
-define( 'SC2_MISC_SIMNATION_POP', 20 );
-define( 'SC2_MISC_NEIGHBOR_1_POP', 439 );
-define( 'SC2_MISC_NEIGHBOR_2_POP', 443 );
-define( 'SC2_MISC_NEIGHBOR_3_POP', 447 );
-define( 'SC2_MISC_NEIGHBOR_4_POP', 451 );
-
 // define: XLAB segment label indexes
 define( 'SC2_XLAB_MAYOR_NAME', 0 );
 
@@ -112,8 +102,21 @@ function _sc2_segment_unpack( $id, $data ) {
       for( $i = 0 ; count( $decoded ) > $i ; $i++ ) {
          $repacked .= pack( 'C1', $decoded[$i] );
       }
-      // Reset array indices from unpack()'s 1-indexed scheme.
-      return array_values( unpack( 'N1200', $repacked ) );
+      $longs = unpack( 'N1200', $repacked );
+
+      // If we ever figure out what those other numbers do, we can add them
+      // with a meaningful index here. This makes it simpler to deal with the
+      // data array client-side if it gets translated to JSON.
+      return array(
+         'founding_year' => $longs[4],
+         'days_elapsed' => $longs[5],
+         'money_supply' => $longs[6],
+         'simnation_pop' => $longs[21],
+         'neighbor1_pop' => $longs[440],
+         'neighbor2_pop' => $longs[444],
+         'neighbor3_pop' => $longs[448],
+         'neighbor4_pop' => $longs[452],
+      );
 
    } elseif( 'XLAB' == $id ) {
       $decoded = _sc2_rle_decode( $data );
