@@ -5,8 +5,8 @@ var sc23dScene = null,
    sc23dMap = null;
 
 function sc23d_render_city( city ) {
-   var WIDTH = 800,
-      HEIGHT = 600,
+   var WIDTH = window.innerWidth,
+      HEIGHT = window.innerHeight,
       VIEW_ANGLE = 45,
       ASPECT = WIDTH / HEIGHT,
       NEAR = 0.1,
@@ -15,13 +15,10 @@ function sc23d_render_city( city ) {
    // Setup the camera.
    sc23dRenderer = new THREE.WebGLRenderer();
    sc23dCamera = new THREE.PerspectiveCamera( VIEW_ANGLE, ASPECT, NEAR, FAR );
-   sc23dCamera.eulerOrder = 'YXZ';
    sc23dCamera.position.x = 0;
    sc23dCamera.position.y = -1100;
    sc23dCamera.position.z = 600;
    sc23dScene = new THREE.Scene();
-
-   console.log( city['XTER'][126][0] );
 
    // Add each tile to the scene.
    var map_geom = new THREE.Geometry();
@@ -66,18 +63,25 @@ function sc23d_render_city( city ) {
          tile_geom.vertices.push( new THREE.Vector3(
             x, y + 10, (tile['altitude'] * 10) + z_sw
          ) );
-         tile_geom.faces.push( new THREE.Face3( 0, 1, 2 ) );
-         tile_geom.faces.push( new THREE.Face3( 2, 3, 0 ) );
+         tile_geom.faces.push( new THREE.Face3( 1, 2, 3 ) );
+         tile_geom.faces.push( new THREE.Face3( 3, 0, 1 ) );
+         tile_geom.faceVertexUvs[0].push( [
+            new THREE.Vector2( 1,0 ),
+            new THREE.Vector2( 1,1 ),
+            new THREE.Vector2( 0,1 ),
+         ] );
+         tile_geom.faceVertexUvs[0].push( [
+            new THREE.Vector2( 0,1 ),
+            new THREE.Vector2( 0,0 ),
+            new THREE.Vector2( 1,0 ),
+         ] );
 
          // Set the tile color based on the presence of water.
-         var color = 0;
          if( tile.water ) {
             THREE.GeometryUtils.merge( water_geom, tile_geom );
          } else {
             THREE.GeometryUtils.merge( map_geom, tile_geom );
          }
-
-         // Add the tile to the map group.
 
          y += 10;
       } );
@@ -86,14 +90,12 @@ function sc23d_render_city( city ) {
    // Create separare meshes for land and water.
    sc23dMap = new THREE.Object3D();
    sc23dMap.add( new THREE.Mesh(
-      map_geom,
-      new THREE.MeshBasicMaterial( {
-         'color': 0xffffe5, 'wireframe': false
+      map_geom, new THREE.MeshBasicMaterial( {
+         'map': THREE.ImageUtils.loadTexture( 'sand.png' )
       } )
    ) );
    sc23dMap.add( new THREE.Mesh(
-      water_geom,
-      new THREE.MeshBasicMaterial( {
+      water_geom, new THREE.MeshBasicMaterial( {
          'color': 0x0000ee, 'wireframe': false
       } )
    ) );
@@ -102,7 +104,7 @@ function sc23d_render_city( city ) {
    sc23dScene.add( sc23dMap );
    sc23dScene.add( sc23dCamera );
    sc23dCamera.lookAt( sc23dScene.position );
-   sc23dRenderer.setSize( window.innerWidth, window.innerHeight );
+   sc23dRenderer.setSize( WIDTH, HEIGHT );
    sc23dRenderer.setClearColor( new THREE.Color( 0x000000 ) );
    $('body').append( sc23dRenderer.domElement );
 
