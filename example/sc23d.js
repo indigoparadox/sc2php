@@ -113,7 +113,7 @@ function sc23dAnimate() {
 
    requestAnimationFrame( sc23dAnimate );
 
-   sc23dMap.rotation.z += 0.05;
+   sc23dMap.rotation.z -= 0.01;
 
    sc23dRenderer.render( sc23dScene, sc23dCamera );
 }
