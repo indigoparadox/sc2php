@@ -27,9 +27,15 @@ if( !file_exists( $city_name.'.json' ) ) {
  <head>
   <title>SimCity 2000 Decoding Demo</title>
   <style type="text/css">
-   body {
+   html, body {
     background: black;
     color: white;
+    margin: 0px;
+    padding: 0px;
+   }
+   body * {
+    margin: 0px;
+    padding: 0px;
    }
   </style>
   <script type="text/javascript" src="three.min.js"></script>
@@ -46,13 +52,10 @@ if( !file_exists( $city_name.'.json' ) ) {
   <?php } ?>
  </head>
  <body>
-  <div style="
-   display: table; margin: 0px auto
-  " id="city-map-container"></div>
+  <pre>
+  <?php if( 'src' == $action ) {
+   print_r( $segments );
+  } ?>
+  </pre>
  </body>
- <pre>
- <?php if( 'src' == $action ) {
-  print_r( $segments );
- } ?>
- </pre>
 </html>
