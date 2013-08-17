@@ -1,0 +1,120 @@
+
+body {
+}
+
+#city-map-container {
+   perspective: 2000px;
+   display: table;
+   margin: 20px auto;
+   width: 768px;
+}
+
+#city-map {
+   background: black;
+   transform-style: preserve-3d;
+   transition: transform 1s;
+   position: absolute;
+   width: 768px;
+   height: 768px;
+}
+
+#city-map-row {
+   width: 768px;
+   height: 6px;
+}
+
+.city-map-tile {
+   background: gray;
+   display: inline-block;
+   position: relative;
+   margin: 0px;
+   padding: 0px;
+   width: 6px;
+   height: 6px;
+}
+
+/* Tile Elevation Colors */
+
+.city-map-alt-1 {
+   background: #101010;
+   transform: translateZ( 10px );
+}
+
+.city-map-alt-2 {
+   background: #202020;
+   transform: translateZ( 20px );
+}
+
+.city-map-alt-3 {
+   background: #303030;
+   transform: translateZ( 30px );
+}
+
+.city-map-alt-4 {
+   background: #404040;
+   transform: translateZ( 40px );
+}
+
+.city-map-alt-5 {
+   background: #505050;
+}
+
+.city-map-alt-6 {
+   background: #606060;
+}
+
+.city-map-alt-7 {
+   background: #707070;
+}
+
+.city-map-alt-8 {
+   background: #808080;
+}
+
+.city-map-alt-9 {
+   background: #909090;
+}
+
+.city-map-alt-10 {
+   background: #a0a0a0;
+}
+
+.city-map-alt-11 {
+   background: #b0b0b0;
+}
+
+.city-map-alt-12 {
+   background: #c0c0c0;
+}
+
+.city-map-alt-13 {
+   background: #d0d0d0;
+}
+
+.city-map-alt-14 {
+   background: #e0e0e0;
+}
+
+.city-map-alt-15 {
+   background: #f0f0f0;
+}
+
+/* Animations */
+
+/* @keyframes city-tilt-back {
+   from {
+      transform: rotateZ( 0deg );
+   }
+   to {
+      transform: rotateZ( 45deg );
+   }
+}
+
+.city-map-animate {
+   animation: city-tilt-back 1s;  
+} */
+
+.city-map-animate {
+   transform: rotateX( 90deg );
+}
+
