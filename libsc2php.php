@@ -292,6 +292,7 @@ function _sc2_segment_unpack( $id, $data ) {
 
             $row[] = $tile;
          }
+         $rows[] = $row;
          return $rows;
 
       case 'XLAB':
