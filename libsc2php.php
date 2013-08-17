@@ -95,7 +95,7 @@ function _sc2_segment_unpack( $id, $data ) {
       return $rows;
       
    } elseif( 'MISC' == $id ) {
-      // Repack the uncompressed data and unpack it as longs.
+      // Repack the data after uncompressing it and unpack it as longs.
       $decoded = _sc2_rle_decode( $data );
       unset( $data );
       $repacked = '';
