@@ -85,7 +85,16 @@ function _sc2_rle_decode( $data ) {
 function _sc2_segment_unpack( $id, $data ) {
    switch( $id ) {
       case 'CNAM':
-         return $data;
+         // Fetch as much of the city name as is printable as a string.
+         $output = '';
+         for( $i = 1 ; $i < strlen( $data ) ; $i++ ) {
+            if( ctype_print( $data[$i] ) ) {
+               $output .= $data[$i];
+            } else {
+               break;
+            }
+         }
+         return $output;
 
       case 'ALTM':
          $unpacked = unpack( 'C*', $data );
