@@ -8,6 +8,7 @@ if( isset( $_REQUEST['action'] ) ) {
 
 // Load the city data.
 $city_name = 'test';
+unlink( $city_name.'.json' );
 if( !file_exists( $city_name.'.json' ) ) {
    $sc2_file = fopen( $city_name.'.sc2', 'rb' );
    if( !sc2_verify( $sc2_file ) ) {
