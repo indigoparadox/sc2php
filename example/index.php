@@ -13,12 +13,36 @@ if( isset( $_FILES['city-upload'] ) && 0 == $_FILES['city-upload']['error'] ) {
    if( sc2_verify( $sc2_file ) ) {
       // Hash and parse the contents.
       $hash = md5( file_get_contents( $_FILES['city-upload']['tmp_name'] ) );
-      $segments = sc2_segments( $sc2_file );
+
+      //for( array(
+      //print_r( sc2_segment_data( $sc2_file, 'XTER' ) );
+      //die();
 
       // Write out a cache json file if not already present.
       if( !file_exists( $hash.'.json' ) ) {
          $cache_file = fopen( $hash.'.json', 'w' );
-         fwrite( $cache_file, json_encode( $segments ) );
+
+         // One way is to grab everything with sc2_segments(), though this may
+         // take a lot of memory!
+         //$segments = sc2_segments( $sc2_file );
+         //fwrite( $cache_file, json_encode( $segments ) );
+
+         // A slightly more efficient way is to grab one segment at a time,
+         // from only the segments we know we'll use, and write them to the
+         // file as we get them.
+         $usable_segments = array( 'CNAM', 'MISC', 'XTER', 'ALTM' );
+         fwrite( $cache_file, '{' );
+         for( $i = 0 ; count( $usable_segments ) > $i ; $i++ ) {
+            fwrite( $cache_file, '"'.$usable_segments[$i].'":' );
+            $segment_data = sc2_segment_data( $sc2_file, $usable_segments[$i] );
+            fwrite( $cache_file, json_encode( $segment_data ) );
+            unset( $segment_data ); // Reclaim memory.
+            if( count( $usable_segments ) - 1 > $i ) {
+               fwrite( $cache_file, ',' );
+            }
+         }
+         fwrite( $cache_file, '}' );
+
          fclose( $cache_file );
       }
    } else {
