@@ -334,10 +334,46 @@ function _sc2_segment_unpack( $id, $data ) {
    }
 }
 
+// return: data for the specified segment type
+function sc2_segment_data( $sc2_file, $type ) {
+   $segments = array();
+   $bytes = 0;
+
+   // Read the file header.
+   fseek( $sc2_file, 0 );
+   $sc2_header = unpack(
+      'A4type/N1packed/A4filetype',
+      fread( $sc2_file, 12 )
+   );
+
+   // Iterate through each segment until we get to the end. (-4?)
+   while( $bytes < $sc2_header['packed'] - 4 ) {
+      $bytes += 8; // Every segment head is 8 bytes.
+      $header = unpack(
+         'A4type/N1packed',
+         fread( $sc2_file, 8 )
+      );
+      if( $header['type'] == $type ) {
+         return _sc2_segment_unpack(
+            $header['type'],
+            fread( $sc2_file, $header['packed'] )
+         );
+      } else {
+         fseek( $sc2_file, $header['packed'], SEEK_CUR );
+      }
+   }
+
+   // Segment not found.
+   return null;
+}
+
 // return: unpacked segment list
 function sc2_segments( $sc2_file ) {
    $segments = array();
    $bytes = 0;
+
+   // TODO: Might deprecate this since it requires so much memory up front.
+   //       Maybe make a wrapper for sc2_segment_data()?
 
    // Read the file header.
    fseek( $sc2_file, 0 );
