@@ -1,0 +1,48 @@
+
+html, body {
+   background: black;
+   color: white;
+   margin: 0px;
+   padding: 0px;
+}
+
+body * {
+   margin: 0px;
+   padding: 0px;
+}
+
+h1 {
+   text-align: center;
+   margin: 20px 0px 0px 0px;
+}
+
+h2 {
+   text-align: center;
+   margin: 0px 0px 10px 0px;
+}
+
+#city-hash-link {
+   text-align: center;
+   margin: 5px 0px 20px 0px;
+}
+
+#city-map-container {
+   border: 1px solid white;
+   display: table;
+   margin: 0px auto;
+   padding: 10px;
+}
+
+#city-upload-form {
+   display: table;
+   margin: 20px auto;
+}
+
+#city-map-src {
+   display: table;
+   margin: 0px auto;
+   width: 600px;
+   height: 200px;
+   overflow: auto;
+}
+

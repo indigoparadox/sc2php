@@ -5,9 +5,9 @@ var sc23dScene = null,
    sc23dMap = null,
    sc23dWaterHeight = 0;
 
-function sc23d_render_city( city ) {
-   var WIDTH = window.innerWidth,
-      HEIGHT = window.innerHeight,
+function sc23d_render_city( city, width, height, selector ) {
+   var WIDTH = width,
+      HEIGHT = height,
       VIEW_ANGLE = 45,
       ASPECT = WIDTH / HEIGHT,
       NEAR = 0.1,
@@ -120,7 +120,7 @@ function sc23d_render_city( city ) {
    sc23dCamera.lookAt( sc23dScene.position );
    sc23dRenderer.setSize( WIDTH, HEIGHT );
    sc23dRenderer.setClearColor( new THREE.Color( 0x000000 ) );
-   $('body').append( sc23dRenderer.domElement );
+   $(selector).append( sc23dRenderer.domElement );
 
    sc23dAnimate();
 }
