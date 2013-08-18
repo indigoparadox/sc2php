@@ -2,7 +2,8 @@
 var sc23dScene = null,
    sc23dRenderer = null,
    sc23dCamera = null,
-   sc23dMap = null;
+   sc23dMap = null,
+   sc23dWaterHeight = 0;
 
 function sc23d_render_city( city ) {
    var WIDTH = window.innerWidth,
@@ -32,35 +33,43 @@ function sc23d_render_city( city ) {
             z_se = 0,
             z_sw = 0;
 
-         // TODO: Set the Z to the water line for water tiles.
+         // Set the water line for water tiles to the highest water tile.
+         if( city['XTER'][row_index][tile_index]['water'] == 'partial' ) {
+            sc23dWaterHeight = tile['altitude'] + 1;
+         }
 
-         // Determine slope heights.
-         if( city['XTER'][row_index][tile_index]['raised']['ne'] ) {
-            z_ne = 10;
-         }
-         if( city['XTER'][row_index][tile_index]['raised']['se'] ) {
-            z_se = 10;
-         }
-         if( city['XTER'][row_index][tile_index]['raised']['sw'] ) {
-            z_sw = 10;
-         }
-         if( city['XTER'][row_index][tile_index]['raised']['nw'] ) {
-            z_nw = 10;
+         if( !tile.water ) {
+            // Set the baseline to the tile altitude.
+            z_ne = z_se = z_sw = z_nw = tile['altitude'] * 10;
+
+            // Determine slope heights.
+            if( city['XTER'][row_index][tile_index]['raised']['ne'] ) {
+               z_ne += 10;
+            }
+            if( city['XTER'][row_index][tile_index]['raised']['se'] ) {
+               z_se += 10;
+            }
+            if( city['XTER'][row_index][tile_index]['raised']['sw'] ) {
+               z_sw += 10;
+            }
+            if( city['XTER'][row_index][tile_index]['raised']['nw'] ) {
+               z_nw += 10;
+            }
          }
 
          // Create a square for the tile.
          var tile_geom = new THREE.Geometry();
          tile_geom.vertices.push( new THREE.Vector3(
-            x, y, (tile['altitude'] * 10) + z_ne
+            x, y, z_ne
          ) );
          tile_geom.vertices.push( new THREE.Vector3(
-            x + 10, y, (tile['altitude'] * 10) + z_se
+            x + 10, y, z_se
          ) );
          tile_geom.vertices.push( new THREE.Vector3(
-            x + 10, y + 10, (tile['altitude'] * 10) + z_sw
+            x + 10, y + 10, z_sw
          ) );
          tile_geom.vertices.push( new THREE.Vector3(
-            x, y + 10, (tile['altitude'] * 10) + z_nw
+            x, y + 10, z_nw
          ) );
          tile_geom.faces.push( new THREE.Face3( 1, 2, 3 ) );
          tile_geom.faces.push( new THREE.Face3( 3, 0, 1 ) );
@@ -86,19 +95,24 @@ function sc23d_render_city( city ) {
       } );
    } );
 
-   // Create separare meshes for land and water.
-   sc23dMap = new THREE.Object3D();
-   sc23dMap.add( new THREE.Mesh(
+   // Create the meshes and set the water height.
+   var land_mesh = new THREE.Mesh(
       map_geom, new THREE.MeshBasicMaterial( {
          'map': THREE.ImageUtils.loadTexture( 'sand.png' ),
          'wireframe': true
       } )
-   ) );
-   sc23dMap.add( new THREE.Mesh(
+   );
+   var water_mesh = new THREE.Mesh(
       water_geom, new THREE.MeshBasicMaterial( {
          'color': 0x0000ee, 'wireframe': true
       } )
-   ) );
+   );
+   water_mesh.position.z = sc23dWaterHeight * 10;
+
+   // Create separare meshes for land and water.
+   sc23dMap = new THREE.Object3D();
+   sc23dMap.add( water_mesh );
+   sc23dMap.add( land_mesh );
 
    // Setup the scene.
    sc23dScene.add( sc23dMap );
