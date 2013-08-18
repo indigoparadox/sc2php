@@ -34,10 +34,7 @@ function sc23d_render_city( city ) {
 
          // TODO: Set the Z to the water line for water tiles.
 
-         /*
-         if( city['XTER'][row_index][tile_index]['raised']['nw'] ) {
-            z_nw = 10;
-         }
+         // Determine slope heights.
          if( city['XTER'][row_index][tile_index]['raised']['ne'] ) {
             z_ne = 10;
          }
@@ -47,21 +44,23 @@ function sc23d_render_city( city ) {
          if( city['XTER'][row_index][tile_index]['raised']['sw'] ) {
             z_sw = 10;
          }
-         */
+         if( city['XTER'][row_index][tile_index]['raised']['nw'] ) {
+            z_nw = 10;
+         }
 
          // Create a square for the tile.
          var tile_geom = new THREE.Geometry();
          tile_geom.vertices.push( new THREE.Vector3(
-            x, y, (tile['altitude'] * 10) + z_nw
+            x, y, (tile['altitude'] * 10) + z_ne
          ) );
          tile_geom.vertices.push( new THREE.Vector3(
-            x + 10, y, (tile['altitude'] * 10) + z_ne
+            x + 10, y, (tile['altitude'] * 10) + z_se
          ) );
          tile_geom.vertices.push( new THREE.Vector3(
-            x + 10, y + 10, (tile['altitude'] * 10) + z_se
+            x + 10, y + 10, (tile['altitude'] * 10) + z_sw
          ) );
          tile_geom.vertices.push( new THREE.Vector3(
-            x, y + 10, (tile['altitude'] * 10) + z_sw
+            x, y + 10, (tile['altitude'] * 10) + z_nw
          ) );
          tile_geom.faces.push( new THREE.Face3( 1, 2, 3 ) );
          tile_geom.faces.push( new THREE.Face3( 3, 0, 1 ) );
@@ -91,12 +90,13 @@ function sc23d_render_city( city ) {
    sc23dMap = new THREE.Object3D();
    sc23dMap.add( new THREE.Mesh(
       map_geom, new THREE.MeshBasicMaterial( {
-         'map': THREE.ImageUtils.loadTexture( 'sand.png' )
+         'map': THREE.ImageUtils.loadTexture( 'sand.png' ),
+         'wireframe': true
       } )
    ) );
    sc23dMap.add( new THREE.Mesh(
       water_geom, new THREE.MeshBasicMaterial( {
-         'color': 0x0000ee, 'wireframe': false
+         'color': 0x0000ee, 'wireframe': true
       } )
    ) );
 

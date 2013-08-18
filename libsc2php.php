@@ -234,6 +234,7 @@ function _sc2_segment_unpack( $id, $data ) {
                   case 0x5:
                      $tile['raised']['sw'] = 1;
                      $tile['raised']['nw'] = 1;
+                     $tile['raised']['ne'] = 1;
                      break;
 
                   case 0x6:
@@ -243,8 +244,8 @@ function _sc2_segment_unpack( $id, $data ) {
                      break;
 
                   case 0x7:
-                     $tile['raised']['sw'] = 1;
                      $tile['raised']['se'] = 1;
+                     $tile['raised']['sw'] = 1;
                      $tile['raised']['nw'] = 1;
                      break;
 
