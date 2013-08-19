@@ -168,7 +168,7 @@ function _sc2_segment_unpack( $id, $data ) {
          for( $i = 0 ; count( $decoded ) > $i ; $i++ ) {
             if( 0 == $i % SC2_MAP_ROWS_MAX ) {
                if( isset( $row ) ) {
-                  // Append the finished 25-byte label to the array.
+                  // Append the finished row to the map.
                   $rows[] = $row;
                }
                $row = array();
@@ -325,6 +325,29 @@ function _sc2_segment_unpack( $id, $data ) {
             }
          }
          return $output;
+
+      case 'XBLD':
+         $decoded = _sc2_rle_decode( $data );
+         unset( $data );
+
+         $rows = array();
+         $range_roads = range( 0x1d, 0x2b );
+         for( $i = 0 ; count( $decoded ) + 1 > $i ; $i++ ) {
+            if( 0 == $i % SC2_MAP_ROWS_MAX ) {
+               if( isset( $row ) ) {
+                  // Append the finished row to the map.
+                  $rows[] = $row;
+               }
+               $row = array();
+            }
+
+            if( in_array( $decoded[$i], $range_roads ) ) {
+               $row[] = array( 'type' => 'road', 'direction' => 'ns' );
+            } else {
+               $row[] = array( 'type' => 'none' );
+            }
+         }
+         return $rows;
 
       // Skip loading other segments for now since they're not even meaningfully
       // decoded yet.
