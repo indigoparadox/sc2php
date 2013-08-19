@@ -97,11 +97,8 @@ function _sc2_segment_unpack( $id, $data ) {
          return $output;
 
       case 'ALTM':
-         $unpacked = unpack( 'C*', $data );
+         $unpacked = unpack( 'n*', $data );
          unset( $data );
-
-         // Each map row is 2 bytes.
-         $map_rows_times_2 = SC2_MAP_ROWS_MAX * 2;
 
          // TODO: Rather than n1 followed by anding, unpack the 4-bit altitude
          //       number directly, somehow.
@@ -111,47 +108,51 @@ function _sc2_segment_unpack( $id, $data ) {
 
          // Divide the map into 128 rows of 128 columns of tiles.
          $rows = array();
-         for( $i = 1 ; $i <= count( $unpacked ) ; $i += $map_rows_times_2 ) {
-            $row = array();
-            for( $j = 0 ; $j < $map_rows_times_2 ; $j += 2 ) {
-               // Pack the bytes and then unpack them into big-endian 16-bit
-               // ints.
-               $tile = unpack( 'n1', pack(
-                  'C2', $unpacked[$i + $j], $unpacked[$i + $j + 1]
-               ) );
-               $tile = array(
-                  'altitude' => $tile_altitude_bits & $tile[1],
-                  'water' => (SC2_BIT7 & $tile[1]) ? true : false,
-               );
-               $row[] = $tile;
+         for( $i = 1 ; count( $unpacked ) > $i ; $i++  ) {
+            if( 0 == ($i - 1) % SC2_MAP_ROWS_MAX ) {
+               if( isset( $row ) ) {
+                  // Append the finished row to the map.
+                  $rows[] = $row;
+               }
+               $row = array();
             }
-            $rows[] = $row;
+
+            // Insert the tile in "reverse" order into the row, or the map will
+            // end up mirrored.
+            $row_position = SC2_MAP_ROWS_MAX - (($i - 1) % SC2_MAP_ROWS_MAX);
+            $row[$row_position] = array(
+               'altitude' => $tile_altitude_bits & $unpacked[$i],
+               'water' => (SC2_BIT7 & $unpacked[$i]) ? true : false,
+            );
          }
+         $rows[] = $row;
          return $rows;
       
-      case 'MISC':
-         // Repack the data after uncompressing it and unpack it as longs.
+      case 'XBLD':
          $decoded = _sc2_rle_decode( $data );
          unset( $data );
-         $repacked = '';
-         for( $i = 0 ; count( $decoded ) > $i ; $i++ ) {
-            $repacked .= pack( 'C1', $decoded[$i] );
-         }
-         $longs = unpack( 'N1200', $repacked );
 
-         // If we ever figure out what those other numbers do, we can add them
-         // with a meaningful index here. This makes it simpler to deal with the
-         // data array client-side if it gets translated to JSON.
-         return array(
-            'founding_year' => $longs[4],
-            'days_elapsed' => $longs[5],
-            'money_supply' => $longs[6],
-            'simnation_pop' => $longs[21],
-            'neighbor1_pop' => $longs[440],
-            'neighbor2_pop' => $longs[444],
-            'neighbor3_pop' => $longs[448],
-            'neighbor4_pop' => $longs[452],
-         );
+         $rows = array();
+         $range_roads = range( 0x1d, 0x2b );
+         for( $i = 0 ; count( $decoded ) > $i ; $i++ ) {
+            if( 0 == $i % SC2_MAP_ROWS_MAX ) {
+               if( isset( $row ) ) {
+                  // Append the finished row to the map.
+                  $rows[] = $row;
+               }
+               $row = array();
+            }
+
+            $row_position = SC2_MAP_ROWS_MAX - ($i % SC2_MAP_ROWS_MAX);
+            if( in_array( $decoded[$i], $range_roads ) ) {
+               $row[$row_position] =
+                  array( 'type' => 'road', 'direction' => 'ns' );
+            } else {
+               $row[$row_position] = array( 'type' => 'none' );
+            }
+         }
+         $rows[] = $row;
+         return $rows;
 
       case 'XTER':
          $decoded = _sc2_rle_decode( $data );
@@ -300,9 +301,17 @@ function _sc2_segment_unpack( $id, $data ) {
                }
             }
 
-            $row[] = $tile;
+            // Insert the tile in "reverse" order into the row, or the map will
+            // end up mirrored.
+            $row_position = SC2_MAP_ROWS_MAX - ($i % SC2_MAP_ROWS_MAX);
+            $row[$row_position] = $tile;
          }
          $rows[] = $row;
+         /*echo( '<p>' );
+         print_r( array_keys( $row ) );
+         echo( '</p><p>' );
+         print_r( array_keys( $row ) );
+         echo( '</p>' );*/
          return $rows;
 
       case 'XLAB':
@@ -326,28 +335,29 @@ function _sc2_segment_unpack( $id, $data ) {
          }
          return $output;
 
-      case 'XBLD':
+      case 'MISC':
+         // Repack the data after uncompressing it and unpack it as longs.
          $decoded = _sc2_rle_decode( $data );
          unset( $data );
-
-         $rows = array();
-         $range_roads = range( 0x1d, 0x2b );
-         for( $i = 0 ; count( $decoded ) + 1 > $i ; $i++ ) {
-            if( 0 == $i % SC2_MAP_ROWS_MAX ) {
-               if( isset( $row ) ) {
-                  // Append the finished row to the map.
-                  $rows[] = $row;
-               }
-               $row = array();
-            }
-
-            if( in_array( $decoded[$i], $range_roads ) ) {
-               $row[] = array( 'type' => 'road', 'direction' => 'ns' );
-            } else {
-               $row[] = array( 'type' => 'none' );
-            }
+         $repacked = '';
+         for( $i = 0 ; count( $decoded ) > $i ; $i++ ) {
+            $repacked .= pack( 'C1', $decoded[$i] );
          }
-         return $rows;
+         $longs = unpack( 'N1200', $repacked );
+
+         // If we ever figure out what those other numbers do, we can add them
+         // with a meaningful index here. This makes it simpler to deal with the
+         // data array client-side if it gets translated to JSON.
+         return array(
+            'founding_year' => $longs[4],
+            'days_elapsed' => $longs[5],
+            'money_supply' => $longs[6],
+            'simnation_pop' => $longs[21],
+            'neighbor1_pop' => $longs[440],
+            'neighbor2_pop' => $longs[444],
+            'neighbor3_pop' => $longs[448],
+            'neighbor4_pop' => $longs[452],
+         );
 
       // Skip loading other segments for now since they're not even meaningfully
       // decoded yet.
