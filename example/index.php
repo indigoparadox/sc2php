@@ -18,39 +18,39 @@ if( isset( $_FILES['city-upload'] ) && 0 == $_FILES['city-upload']['error'] ) {
       //print_r( sc2_segment_data( $sc2_file, 'XTER' ) );
       //die();
 
-      unlink( $hash.'.json' );
-      // Write out a cache json file if not already present.
-      if( !file_exists( $hash.'.json' ) ) {
-         $cache_file = fopen( $hash.'.json', 'w' );
-
-         // One way is to grab everything with sc2_segments(), though this may
-         // take a lot of memory!
-         //$segments = sc2_segments( $sc2_file );
-         //fwrite( $cache_file, json_encode( $segments ) );
-
-         // A slightly more efficient way is to grab one segment at a time,
-         // from only the segments we know we'll use, and write them to the
-         // file as we get them.
-         $usable_segments = array( 'CNAM', 'MISC', 'XTER', 'XBLD', 'ALTM' );
-         fwrite( $cache_file, '{' );
-         for( $i = 0 ; count( $usable_segments ) > $i ; $i++ ) {
-            fwrite( $cache_file, '"'.$usable_segments[$i].'":' );
-            $segment_data = sc2_segment_data( $sc2_file, $usable_segments[$i] );
-            fwrite( $cache_file, json_encode( $segment_data ) );
-            unset( $segment_data ); // Reclaim memory.
-            if( count( $usable_segments ) - 1 > $i ) {
-               fwrite( $cache_file, ',' );
-            }
-         }
-         fwrite( $cache_file, '}' );
-
-         fclose( $cache_file );
+      if( file_exists( $hash.'.json' ) ) {
+         unlink( $hash.'.json' );
       }
-   } else {
-      // Get rid of this trash.
-      unlink( $_FILES['city-upload']['tmp_name'] );
+      // Write out a cache json file if not already present.
+      $cache_file = fopen( $hash.'.json', 'w' );
+
+      // One way is to grab everything with sc2_segments(), though this may
+      // take a lot of memory!
+      //$segments = sc2_segments( $sc2_file );
+      //fwrite( $cache_file, json_encode( $segments ) );
+
+      // A slightly more efficient way is to grab one segment at a time,
+      // from only the segments we know we'll use, and write them to the
+      // file as we get them.
+      $usable_segments = array(
+         'CNAM', 'MISC', 'XTER', 'XBLD', 'ALTM', 'XLAB'
+      );
+      fwrite( $cache_file, '{' );
+      for( $i = 0 ; count( $usable_segments ) > $i ; $i++ ) {
+         fwrite( $cache_file, '"'.$usable_segments[$i].'":' );
+         $segment_data = sc2_segment_data( $sc2_file, $usable_segments[$i] );
+         fwrite( $cache_file, json_encode( $segment_data ) );
+         unset( $segment_data ); // Reclaim memory.
+         if( count( $usable_segments ) - 1 > $i ) {
+            fwrite( $cache_file, ',' );
+         }
+      }
+      fwrite( $cache_file, '}' );
+
+      fclose( $cache_file );
    }
    fclose( $sc2_file );
+   unlink( $_FILES['city-upload']['tmp_name'] );
    
 } elseif( isset( $_GET['hash'] ) && ctype_alnum( $_GET['hash'] ) ) {
    $hash = $_GET['hash'];
@@ -76,6 +76,7 @@ if( isset( $_GET['src'] ) && isset( $hash ) ) {
     $.getJSON( '<?php echo( $hash ); ?>.json', function( data ) {
       sc23d_render_city( data, 800, 600, '#city-map-container' );
       $('h1').text( data['CNAM'] );
+      $('#city-mayor-name').text( 'Mayor: ' + data['XLAB'][0] );
     } );
    } );
   </script>
@@ -84,6 +85,7 @@ if( isset( $_GET['src'] ) && isset( $hash ) ) {
  <body>
   <?php if( isset( $hash ) ) { ?>
   <h1><?php echo( $hash ); ?></h1>
+  <p id="city-mayor-name"></p>
   <p id="city-hash-link">
    <a href="?hash=<?php echo( $hash ); ?>">Permalink</a>
   </p>
