@@ -24,6 +24,7 @@ function sc23d_render_city( city, width, height, selector ) {
    // Add each tile to the scene.
    var map_geom = new THREE.Geometry();
    var water_geom = new THREE.Geometry();
+   var roads_geom = new THREE.Geometry();
    $.each( city['ALTM'], function( row_index, row ) {
       var x = -640 + (row_index * 10);
       var y = -640;
@@ -34,7 +35,7 @@ function sc23d_render_city( city, width, height, selector ) {
             z_sw = 0;
 
          // Set the water line for water tiles to the highest water tile.
-         if( city['XTER'][row_index][tile_index]['water'] == 'partial' ) {
+         if( 'partial' == city['XTER'][row_index][tile_index]['water'] ) {
             sc23dWaterHeight = tile['altitude'] + 1;
          }
 
@@ -91,6 +92,11 @@ function sc23d_render_city( city, width, height, selector ) {
             THREE.GeometryUtils.merge( map_geom, tile_geom );
          }
 
+         // Add to the roads/buildings mesh if applicable.
+         if( 'road' == city['XBLD'][row_index][tile_index]['type'] ) {
+            THREE.GeometryUtils.merge( roads_geom, tile_geom );
+         }
+
          y += 10;
       } );
    } );
@@ -107,12 +113,19 @@ function sc23d_render_city( city, width, height, selector ) {
          'color': 0x0000ee, 'wireframe': true
       } )
    );
+   var roads_mesh = new THREE.Mesh(
+      roads_geom, new THREE.MeshBasicMaterial( {
+         'color': 0x333333, 'wireframe': true
+      } )
+   );
    water_mesh.position.z = sc23dWaterHeight * 10;
+   roads_mesh.position.z = 1; // Bump so it's on top.
 
    // Create separare meshes for land and water.
    sc23dMap = new THREE.Object3D();
    sc23dMap.add( water_mesh );
    sc23dMap.add( land_mesh );
+   sc23dMap.add( roads_mesh );
 
    // Setup the scene.
    sc23dScene.add( sc23dMap );

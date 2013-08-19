@@ -18,6 +18,7 @@ if( isset( $_FILES['city-upload'] ) && 0 == $_FILES['city-upload']['error'] ) {
       //print_r( sc2_segment_data( $sc2_file, 'XTER' ) );
       //die();
 
+      unlink( $hash.'.json' );
       // Write out a cache json file if not already present.
       if( !file_exists( $hash.'.json' ) ) {
          $cache_file = fopen( $hash.'.json', 'w' );
@@ -30,7 +31,7 @@ if( isset( $_FILES['city-upload'] ) && 0 == $_FILES['city-upload']['error'] ) {
          // A slightly more efficient way is to grab one segment at a time,
          // from only the segments we know we'll use, and write them to the
          // file as we get them.
-         $usable_segments = array( 'CNAM', 'MISC', 'XTER', 'ALTM' );
+         $usable_segments = array( 'CNAM', 'MISC', 'XTER', 'XBLD', 'ALTM' );
          fwrite( $cache_file, '{' );
          for( $i = 0 ; count( $usable_segments ) > $i ; $i++ ) {
             fwrite( $cache_file, '"'.$usable_segments[$i].'":' );
